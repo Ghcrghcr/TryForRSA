@@ -22,7 +22,7 @@ int GMPY_mpz_is_lucas_prp(const mpz_t p, const mpz_t q,const mpz_t n);
 
 int main()
 {
-    mpz_t  p, q , e, N, d, M, C, ed;
+    mpz_t  p, q , e, N, d, M, C, Mout;
     mpz_init(p);
     mpz_init(q);
     mpz_init(e);
@@ -30,16 +30,17 @@ int main()
     mpz_init(d);
     mpz_init(M);
     mpz_init(C);
-    mpz_init(ed);
+    mpz_init(Mout);
     mpz_set_str(e,"65537",10);
     mpz_set_str(M,"123456abcdef",16);
     printf("\n");
     generatepq(&p,&q,&N,e);
     generated(&d, p, q, e);
-    mpz_mul(ed,e,d);
-    mpz_powm(C,M,ed,N);
+    mpz_powm(C,M,e,N);
     gmp_printf(" M = %Zx\n\n",M);
     gmp_printf(" C = %Zx\n\n",C);
+    mpz_powm(Mout,C,d,N);
+    gmp_printf(" decrypt C = %Zx\n\n",Mout);
 
     printf("Type any thing to quit\n\n");
     mpz_clear(p);
@@ -49,7 +50,7 @@ int main()
     mpz_clear(d);
     mpz_clear(M);
     mpz_clear(C);
-    mpz_clear(ed);
+    mpz_clear(Mout);
     getchar();
     
     return 0;
