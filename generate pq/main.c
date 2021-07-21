@@ -15,7 +15,9 @@ int generatepq ( mpz_t* p,mpz_t* q, const mpz_t e);
 int WinRand(unsigned char* a,unsigned int lenth);
 int generatep( mpz_t p, const mpz_t p1, const mpz_t p2, const mpz_t e, const mpz_t xp);
 //int lucustest(const mpz_t N);
+//This function source is from the GMPY2 LIB
 int GMPY_mpz_is_selfridge_prp(const mpz_t n);
+//This function source is from the GMPY2 LIB
 int GMPY_mpz_is_lucas_prp(const mpz_t p, const mpz_t q,const mpz_t n);
 
 int main()
@@ -306,7 +308,7 @@ int lucustest(const mpz_t N)
     
 }
 */
-
+//This function source is from the GMPY2 LIB
 int GMPY_mpz_is_lucas_prp(const mpz_t p, const mpz_t q,const mpz_t n)
 {
     mpz_t zD, res, index, uh, vl ,vh, ql, qh, tmp;
@@ -473,6 +475,7 @@ int GMPY_mpz_is_lucas_prp(const mpz_t p, const mpz_t q,const mpz_t n)
     return result;
 }
 
+//This function source is from the GMPY2 LIB
 int GMPY_mpz_is_selfridge_prp(const mpz_t n)
 {
     long d = 5, p = 1, q = 0, max_d = 1000000;
