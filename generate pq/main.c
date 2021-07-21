@@ -1,17 +1,16 @@
 //Inspired by gmpy2 : https://pypi.org/project/gmpy2/
 //Used the The GNU Multiple Precision Arithmetic Library : https://gmplib.org/
+//Standard: ANSI-X9.31 -1998 Digital Signatures Using Reversible Public Key Cryptography for the Financial Services Industry (rDSA)
 
 #include<stdio.h>
 #include<gmp.h>
 #include <windows.h>
 #include <Wincrypt.h>
 
-//b504f333f9de6484597d89b3754abe9f1d6f60ba893ba84ced17ac85833399154afc83043ab8a2c3a8b1fe6fdc83db390f74a85e439c7b4a780487363dfa2768   更号2
-#define root2512 "b504f333f9de6484597d89b3754abe9f1d6f60ba893ba84ced17ac85833399154afc83043ab8a2c3a8b1fe6fdc83db390f74a85e439c7b4a780487363dfa2768"
-//4AFB0CCC06219B7BA682764C8AB54160E2909F4576C457B312E8537A7CCC66EAB5037CFBC5475D3C574E0190237C24C6F08B57A1BC6384B587FB78C9C205D898      number
-#define numberuproot2512 "4AFB0CCC06219B7BA682764C8AB54160E2909F4576C457B312E8537A7CCC66EAB5037CFBC5475D3C574E0190237C24C6F08B57A1BC6384B587FB78C9C205D898"
+#define parameter_s 4           // 0 for 1024, 1 for 1024 + 256, 2 for 1024 + 2*256... s for 1024 + s*256
 
-int generatepq ( mpz_t* p,mpz_t* q, const mpz_t e);
+
+int generatepq ( mpz_t* p,mpz_t* q, mpz_t * N, const mpz_t e);
 int WinRand(unsigned char* a,unsigned int lenth);
 int generatep( mpz_t p, const mpz_t p1, const mpz_t p2, const mpz_t e, const mpz_t xp);
 //int lucustest(const mpz_t N);
@@ -22,19 +21,26 @@ int GMPY_mpz_is_lucas_prp(const mpz_t p, const mpz_t q,const mpz_t n);
 
 int main()
 {
-    mpz_t  p, q ,e;
+    mpz_t  p, q ,e,N;
     mpz_init(p);
     mpz_init(q);
     mpz_init(e);
+    mpz_init(N);
     mpz_set_str(e,"65537",10);
-    generatepq(&p,&q,e);
-    printf("Type any thing to quit\n");
+    printf("\n");
+    generatepq(&p,&q,&N,e);
+    printf("Type any thing to quit\n\n");
     getchar();
     return 0;
 }
 
-int generatepq ( mpz_t* p_ptr,mpz_t* q_ptr, const mpz_t e)
+int generatepq ( mpz_t* p_ptr,mpz_t* q_ptr, mpz_t* N_ptr,const mpz_t e)
 {
+    mpz_t const_root2;
+    mpz_init(const_root2);
+    mpz_set_ui(const_root2,1);
+    mpz_mul_2exp(const_root2,const_root2,1023+256*parameter_s);
+    mpz_sqrt(const_root2,const_root2);
     mpz_t xp1, xp2 ,p1 ,p2;
     mpz_init(xp1);
     mpz_init(xp2);
@@ -44,40 +50,36 @@ int generatepq ( mpz_t* p_ptr,mpz_t* q_ptr, const mpz_t e)
     WinRand(rand1,25);
     rand1[25]='\0';
     mpz_set_str(xp1, rand1, 16);            //16--hex
-    gmp_printf("xp1 = %Zx\n", xp1);
+    gmp_printf("xp1 = %Zx\n\n", xp1);
     mpz_nextprime(p1,xp1);
         /*
     while(mpz_probab_prime_p(xp1,27) == 0)          //miller robin
     {
         mpz_add_ui(xp1,xp1,1);
-        gmp_printf("xp1 = %Zx\n", xp1);
+        gmp_printf("xp1 = %Zx\n\n", xp1);
     }
-    gmp_printf("xp1 = %Zx\n", xp1);         */    
-    gmp_printf("p1 = %Zx\n", p1);
+    gmp_printf("xp1 = %Zx\n\n", xp1);         */    
+    gmp_printf("p1 = %Zx\n\n", p1);
     WinRand(rand1,25);
     rand1[25]='\0';
     mpz_set_str(xp2, rand1, 16); 
-    gmp_printf("xp2 = %Zx\n", xp2);
+    gmp_printf("xp2 = %Zx\n\n", xp2);
     mpz_nextprime(p2,xp2);
-    gmp_printf("p2 = %Zx\n", p2);
+    gmp_printf("p2 = %Zx\n\n", p2);
 
     //random xp
     unsigned char * randxp;
-    randxp = (unsigned char *)malloc(129);
-    randxp[128] = '\0';
-    mpz_t xp, * const_root2_ptr;
-    const_root2_ptr = (mpz_t*)malloc(sizeof(mpz_t));
+    randxp = (unsigned char *)malloc(128 + 32 * parameter_s + 1);
+    randxp[128 + 32 * parameter_s] = '\0';
+    mpz_t xp;
     mpz_init(xp);
-    mpz_init(*const_root2_ptr);
-    mpz_set_str(* const_root2_ptr,root2512,16);
     do
     {
-        WinRand(randxp,128);
+        WinRand(randxp,128 + 32 * parameter_s);
         mpz_set_str(xp,randxp,16);
-    } while (mpz_cmp(xp,* const_root2_ptr)<0);
-    gmp_printf("xp = %Zx\n",xp);
+    } while (mpz_cmp(xp,const_root2)<0);
+    gmp_printf("xp = %Zx\n\n",xp);
     free(randxp);
-    free(const_root2_ptr);
     //random xp end
 
     //generate p
@@ -92,49 +94,45 @@ int generatepq ( mpz_t* p_ptr,mpz_t* q_ptr, const mpz_t e)
     do
     {
         mpz_set_str(xp1, rand1, 16);            //16--hex
-        gmp_printf("xq1 = %Zx\n", xp1);
+        gmp_printf("xq1 = %Zx\n\n", xp1);
         mpz_nextprime(p1,xp1);
             /*
         while(mpz_probab_prime_p(xp1,27) == 0)          //miller robin
         {
             mpz_add_ui(xp1,xp1,1);
-            gmp_printf("xp1 = %Zx\n", xp1);
+            gmp_printf("xp1 = %Zx\n\n", xp1);
         }
-        gmp_printf("xp1 = %Zx\n", xp1);         */    
-        gmp_printf("q1 = %Zx\n", p1);
+        gmp_printf("xp1 = %Zx\n\n", xp1);         */    
+        gmp_printf("q1 = %Zx\n\n", p1);
         WinRand(rand1,25);
         rand1[25]='\0';
         mpz_set_str(xp2, rand1, 16); 
-        gmp_printf("xq2 = %Zx\n", xp2);
+        gmp_printf("xq2 = %Zx\n\n", xp2);
         mpz_nextprime(p2,xp2);
-        gmp_printf(" q2 = %Zx\n", p2);
+        gmp_printf(" q2 = %Zx\n\n", p2);
 
         //random xq
         unsigned char * randxq;
-        randxq = (unsigned char *)malloc(129);
-        randxq[128] = '\0';
-        mpz_t xq, * const_root2_ptr, tempxpq;
-        const_root2_ptr = (mpz_t*)malloc(sizeof(mpz_t));
+        randxq = (unsigned char *)malloc(128 + 32 * parameter_s + 1);
+        randxq[128 + 32 * parameter_s] = '\0';
+        mpz_t xq, tempxpq;
         mpz_init(xq);
-        mpz_init(*const_root2_ptr);
         mpz_init(tempxpq);
-        mpz_set_str(* const_root2_ptr,root2512,16);
         do
         {
-            WinRand(randxq,128);
+            WinRand(randxq,128 + 32 * parameter_s);
             mpz_set_str(xq,randxq,16);
             mpz_sub(tempxpq,xp,xq);
             mpz_abs(tempxpq,tempxpq);
-            mpz_div_2exp(tempxpq,tempxpq,412);
-        } while ((mpz_cmp(xq,* const_root2_ptr)<0)||(mpz_cmp_si(tempxpq,0)<=0));
-        gmp_printf("xq = %Zx\n",xq);
+            mpz_div_2exp(tempxpq,tempxpq,412 + 128*parameter_s);
+        } while ((mpz_cmp(xq,const_root2)<0)||(mpz_cmp_si(tempxpq,0)<1));
+        gmp_printf("xq = %Zx\n\n",xq);
         mpz_clear(tempxpq);
         free(randxq);
-        free(const_root2_ptr);
-        //random xp end
+        //random xq end
 
         if(generatep(*q_ptr,p1,p2,e,xq))
-            gmp_printf("Find first q = %Zx\n",*q_ptr);
+            gmp_printf("Find first q = %Zx\n\n",*q_ptr);
         else
             printf("Occurred error in finding q!\n\n");
         mpz_sub(temptest,*p_ptr,*q_ptr);
@@ -142,7 +140,9 @@ int generatepq ( mpz_t* p_ptr,mpz_t* q_ptr, const mpz_t e)
         mpz_div_2exp(temptest,temptest,412);
     } while (mpz_cmp_si(temptest,0)<=0);
     gmp_printf("Find fitable q = %Zx\n\n",*q_ptr);
-    
+    mpz_mul(*N_ptr,*p_ptr,*q_ptr);
+    gmp_printf("N = p*q = %Zx\n\n",*N_ptr);
+    mpz_clear(const_root2);
     return 1;
     
 }
@@ -164,15 +164,15 @@ int WinRand(unsigned char* a,unsigned int lenth)
                 NULL,
                 PROV_RSA_FULL,
                 CRYPT_NEWKEYSET)) {
-                //printf("A new key container has been created.\n");
+                //printf("A new key container has been created.\n\n");
             } else {
-                printf("Could not create a new key container.\n");
+                printf("Could not create a new key container.\n\n");
                 //exit(1);
                 return 0;
             }
         } else {
             printf("A cryptographic service handle could not be "
-            "acquired.\n");
+            "acquired.\n\n");
             //exit(1);
             return 0;
         }
@@ -188,12 +188,12 @@ int WinRand(unsigned char* a,unsigned int lenth)
             //return 0;
         }
         int i;
-        char temp;
+        char temp[3];
         a[0] = a[0]|(0x80);                 //random top is 1xxx xxxx
         for(i=0;i<lenth;i++)
         {  
-            sprintf(&temp,"%02x",a[i]);
-            a[i] = temp;
+            sprintf(temp,"%02x",a[i]);
+            a[i] = temp[0];
         }  
         return 1;
     } 
@@ -233,7 +233,7 @@ int generatep(mpz_t p, const mpz_t p1, const mpz_t p2, const mpz_t e, const mpz_
 
     if(mpz_cmp_ui(rp,0)<0)
         mpz_add(rp,rp,p1p2);
-    gmp_printf("rp = %Zx\n", rp);
+    gmp_printf("rp = %Zx\n\n", rp);
     mpz_clear(temp2);
 
     //calculate y0
@@ -244,7 +244,7 @@ int generatep(mpz_t p, const mpz_t p1, const mpz_t p2, const mpz_t e, const mpz_
     mpz_add(yi,xp,temp1);       //yi = xp + (rp - xp mod p1p2)
     if(mpz_cmp(yi,xp)<0)
         mpz_add(yi, yi, p1p2);
-    gmp_printf("y0 = %Zx\n", yi);
+    gmp_printf("y0 = %Zx\n\n", yi);
 
     //yi + j * p1p2
     if(mpz_odd_p(e))
@@ -286,7 +286,7 @@ int lucustest(const mpz_t N)
         mpz_add_ui(D,D,2);
         mpz_neg(D,D);
     }
-    gmp_printf("lucas D = %Zx\n",D);
+    gmp_printf("lucas D = %Zx\n\n",D);
     mpz_set_si(P,1);
     mpz_ui_sub(Q, 1, D);
     mpz_div_ui(Q , Q, 4);
