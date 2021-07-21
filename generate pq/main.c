@@ -11,6 +11,7 @@
 
 
 int generatepq ( mpz_t* p,mpz_t* q, mpz_t * N, const mpz_t e);
+int generated(mpz_t * d_ptr,const mpz_t p,const mpz_t q, const mpz_t e);
 int WinRand(unsigned char* a,unsigned int lenth);
 int generatep( mpz_t p, const mpz_t p1, const mpz_t p2, const mpz_t e, const mpz_t xp);
 //int lucustest(const mpz_t N);
@@ -21,16 +22,36 @@ int GMPY_mpz_is_lucas_prp(const mpz_t p, const mpz_t q,const mpz_t n);
 
 int main()
 {
-    mpz_t  p, q ,e,N;
+    mpz_t  p, q , e, N, d, M, C, ed;
     mpz_init(p);
     mpz_init(q);
     mpz_init(e);
     mpz_init(N);
+    mpz_init(d);
+    mpz_init(M);
+    mpz_init(C);
+    mpz_init(ed);
     mpz_set_str(e,"65537",10);
+    mpz_set_str(M,"123456abcdef",16);
     printf("\n");
     generatepq(&p,&q,&N,e);
+    generated(&d, p, q, e);
+    mpz_mul(ed,e,d);
+    mpz_powm(C,M,ed,N);
+    gmp_printf(" M = %Zx\n\n",M);
+    gmp_printf(" C = %Zx\n\n",C);
+
     printf("Type any thing to quit\n\n");
+    mpz_clear(p);
+    mpz_clear(q);
+    mpz_clear(e);
+    mpz_clear(N);
+    mpz_clear(d);
+    mpz_clear(M);
+    mpz_clear(C);
+    mpz_clear(ed);
     getchar();
+    
     return 0;
 }
 
@@ -271,6 +292,33 @@ int generatep(mpz_t p, const mpz_t p1, const mpz_t p2, const mpz_t e, const mpz_
         printf("e is even, generate p q failed\n\n");
         return 0;
     }
+    return 1;
+}
+
+int generated(mpz_t * d_ptr,const mpz_t p,const mpz_t q, const mpz_t e)
+{
+    mpz_t L , psub , qsub ,halfL;
+    mpz_init(L);
+    mpz_init(psub);
+    mpz_init(qsub);
+    mpz_init(halfL);
+    mpz_sub_ui(psub, p, 1);
+    mpz_sub_ui(qsub, q, 1);
+    mpz_lcm(L, psub, qsub);
+    if(mpz_odd_p(e))
+    {
+        mpz_invert(*d_ptr, e, L);
+    }
+    else
+    {
+        mpz_div_2exp(halfL,L,1);
+        mpz_invert(*d_ptr, e, halfL);
+    }
+    mpz_clear(L);
+    mpz_clear(psub);
+    mpz_clear(qsub);
+    mpz_clear(halfL);
+    gmp_printf(" d = %Zx\n\n",*d_ptr);
     return 1;
 }
 
