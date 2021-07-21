@@ -125,7 +125,7 @@ int generatepq ( mpz_t* p_ptr,mpz_t* q_ptr, mpz_t* N_ptr,const mpz_t e)
             mpz_sub(tempxpq,xp,xq);
             mpz_abs(tempxpq,tempxpq);
             mpz_div_2exp(tempxpq,tempxpq,412 + 128*parameter_s);
-        } while ((mpz_cmp(xq,const_root2)<0)||(mpz_cmp_si(tempxpq,0)<1));
+        } while ((mpz_cmp(xq,const_root2)<0)||(mpz_cmp_si(tempxpq,1)<0));
         gmp_printf("xq = %Zx\n\n",xq);
         mpz_clear(tempxpq);
         free(randxq);
@@ -137,8 +137,9 @@ int generatepq ( mpz_t* p_ptr,mpz_t* q_ptr, mpz_t* N_ptr,const mpz_t e)
             printf("Occurred error in finding q!\n\n");
         mpz_sub(temptest,*p_ptr,*q_ptr);
         mpz_abs(temptest,temptest);
-        mpz_div_2exp(temptest,temptest,412);
-    } while (mpz_cmp_si(temptest,0)<=0);
+        mpz_div_2exp(temptest,temptest,412 + 128*parameter_s);
+    } while (mpz_cmp_si(temptest,1)<0);
+
     gmp_printf("Find fitable q = %Zx\n\n",*q_ptr);
     mpz_mul(*N_ptr,*p_ptr,*q_ptr);
     gmp_printf("N = p*q = %Zx\n\n",*N_ptr);
@@ -267,6 +268,7 @@ int generatep(mpz_t p, const mpz_t p1, const mpz_t p2, const mpz_t e, const mpz_
     }
     else
     {
+        printf("e is even, generate p q failed\n\n");
         return 0;
     }
     return 1;
